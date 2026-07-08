@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Lane6 | Client Benchmark Scaffold</title>
+<style>
+  :root {
+    --navy:    #0D1B2A;
+    --navy2:   #162A42;
+    --blue:    #1A6BFF;
+    --teal:    #00C2CB;
+    --gold:    #F5A623;
+    --red:     #E02A2A;
+    --green:   #0AA86A;
+    --white:   #FFFFFF;
+    --offwhite:#F4F6FA;
+    --mid:     #5A6A7E;
+    --dark:    #0D1B2A;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: #000;
+    overflow: hidden;
+    height: 100vh;
+    width: 100vw;
+  }
+  .deck { width: 100%; height: 100%; position: relative; }
+  .slide {
+    position: absolute; inset: 0;
+    display: none; opacity: 0;
+    transition: opacity 0.35s ease;
+    overflow: hidden;
+  }
+  .slide.active { display: flex; opacity: 1; }
+  .slide-inner {
+    width: 100%; height: 100%;
+    padding: 52px 64px 50px;
+    display: flex; flex-direction: column;
+    position: relative;
+  }
+
+  /* nav */
+  .nav {
+    position: fixed; bottom: 28px; left: 50%;
+    transform: translateX(-50%);
+    display: flex; align-items: center; gap: 18px; z-index: 999;
+  }
+  .nav button {
+    background: rgba(255,255,255,.12);
+    border: 1px solid rgba(255,255,255,.22);
+    color: #fff; padding: 9px 22px; border-radius: 6px;
+    cursor: pointer; font-size: 13px; font-family: inherit;
+    letter-spacing: .04em; transition: background .2s;
+    backdrop-filter: blur(8px);
+  }
+  .nav button:hover { background: rgba(255,255,255,.22); }
+  .nav button:disabled { opacity: .3; cursor: default; }
+  .nav .counter { color: rgba(255,255,255,.5); font-size: 12px; min-width: 52px; text-align: center; }
+  .hint { position: fixed; top: 18px; right: 22px; font-size: 11px; color: rgba(255,255,255,.25); z-index: 999; letter-spacing: .06em; }
+
+  /* type */
+  .label { font-size: 10px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; margin-bottom: 10px; }
+  .h1 { font-size: clamp(28px,3.6vw,52px); font-weight: 700; line-height: 1.1; }
+  .h2 { font-size: clamp(22px,2.6vw,36px); font-weight: 700; line-height: 1.15; }
+  .h3 { font-size: clamp(13px,1.4vw,18px); font-weight: 700; }
+  .body { font-size: clamp(12px,1.2vw,15px); line-height: 1.55; }
+  .sub  { font-size: clamp(10px,1.0vw,12px); line-height: 1.5; }
+
+  /* util */
+  .flex  { display: flex; }
+  .col   { flex-direction: column; }
+  .grow  { flex: 1; }
+  .gap8  { gap: 8px; }
+  .gap12 { gap: 12px; }
+  .gap16 { gap: 16px; }
+  .gap20 { gap: 20px; }
+  .gap24 { gap: 24px; }
+
+  /* strip */
+  .strip     { position: absolute; left:0; top:0; bottom:0; width:6px; }
+  .strip-top { position: absolute; left:0; right:0; top:0; height:5px; }
+
+  /* card */
+  .card {
+    background: rgba(255,255,255,.06);
+    border-radius: 8px; padding: 20px 22px;
+    flex: 1; position: relative; overflow: hidden;
+  }
+  .card-light {
+    background: #fff; border-radius: 8px; padding: 20px 22px;
+    flex: 1; position: relative; overflow: hidden;
+  }
+  .card-accent { position: absolute; left:0; top:0; bottom:0; width:5px; border-radius: 8px 0 0 8px; }
+  .card-top    { position: absolute; left:0; right:0; top:0; height:4px; border-radius: 8px 8px 0 0; }
+
+  /* table rows */
+  .trow { display: flex; align-items: center; padding: 10px 16px; border-radius: 5px; gap: 16px; }
+  .tcol-l { width: 38%; font-size: 13px; }
+  .tcol-r { flex: 1; font-size: 13px; }
+
+  /* placeholder */
+  .ph-box {
+    background: #FFFBF0; border-radius: 8px;
+    padding: 18px 20px; flex: 1;
+    border-top: 4px solid var(--gold);
+    display: flex; flex-direction: column;
+  }
+  .ph-label {
+    font-size: 10px; font-weight: 700;
+    color: var(--gold); text-transform: uppercase;
+    letter-spacing: .12em; margin-bottom: 6px;
+  }
+  .ph-hint { font-size: 12px; color: var(--mid); font-style: italic; }
+
+  /* footer */
+  .footer {
+    position: absolute; bottom:0; left:0; right:0; height:34px;
+    background: var(--navy);
+    display: flex; align-items: center; padding: 0 24px;
+    justify-content: space-between;
+  }
+  .footer span { font-size: 10px; color: var(--mid); letter-spacing: .06em; }
+
+  /* leak card */
+  .leak-card {
+    flex: 1; background: #fff; border-radius: 8px;
+    overflow: hidden; display: flex; flex-direction: column;
+  }
+  .leak-head { padding: 10px 16px; }
+  .leak-body { padding: 12px 16px; flex: 1; }
+
+  /* ba */
+  .ba-col { flex:1; border-radius:10px; overflow:hidden; display:flex; flex-direction:column; }
+  .ba-head { padding:12px 20px; font-size:13px; font-weight:700; letter-spacing:.06em; }
+  .ba-item { display:flex; align-items:flex-start; gap:10px; padding:9px 20px; font-size:13px; line-height:1.4; border-bottom:1px solid rgba(0,0,0,.04); }
+  .ba-icon { font-size:14px; flex-shrink:0; margin-top:1px; }
+</style>
+</head>
+<body>
+<div class="deck">
+
+  <!-- ── S1: COVER ─────────────────────────────────────────── -->
+  <div class="slide active" id="s1">
+    <div class="strip" style="background:var(--gold);"></div>
+    <div class="slide-inner" style="background:var(--navy); padding-left:76px; justify-content:center;">
+      <div style="color:var(--gold); font-size:10px; font-weight:700; letter-spacing:.14em; text-transform:uppercase; margin-bottom:14px;">Lane6 &nbsp;|&nbsp; Client Case Study</div>
+      <div style="width:48px; height:3px; background:var(--teal); margin-bottom:24px;"></div>
+      <div class="h1" style="color:#fff; margin-bottom:16px;">The Connor Godfrey Effect</div>
+      <div style="color:var(--offwhite); font-size:16px; font-style:italic; line-height:1.65; max-width:660px; margin-bottom:32px; opacity:.8;">
+        How a Buffalo healthcare attorney built a client-acquisition machine and turned it into the proof point for every business he represents.
+      </div>
+      <div style="display:inline-flex; align-items:center; gap:10px; background:rgba(255,255,255,.06); border-radius:6px; padding:10px 18px;">
+        <span style="color:var(--teal); font-size:13px; font-weight:700;">Powered by Lane6</span>
+        <span style="color:var(--mid); font-size:11px;">lane6.ai</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── S2: MEET CONNOR ───────────────────────────────────── -->
+  <div class="slide" id="s2">
+    <div class="strip-top" style="background:var(--navy);"></div>
+    <div class="slide-inner" style="background:var(--offwhite);">
+      <div class="label" style="color:var(--navy);">Meet Connor</div>
+      <div class="h2" style="color:var(--dark); margin-bottom:22px;">Connor T. Godfrey</div>
+
+      <div class="flex gap16 grow">
+        <div style="flex:1; display:flex; flex-direction:column; gap:5px;">
+          <div class="trow" style="background:var(--navy); border-radius:6px;">
+            <div class="tcol-l" style="color:var(--mid); font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.1em;">Field</div>
+            <div class="tcol-r" style="color:var(--mid); font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.1em;">Detail</div>
+          </div>
+          <div class="trow" style="background:#fff;">
+            <div class="tcol-l" style="color:var(--blue); font-weight:700; font-size:12px;">Firm</div>
+            <div class="tcol-r" style="color:var(--dark); font-size:13px;">Lippes Mathias LLP &nbsp;&middot;&nbsp; Buffalo, NY</div>
+          </div>
+          <div class="trow" style="background:var(--offwhite);">
+            <div class="tcol-l" style="color:var(--blue); font-weight:700; font-size:12px;">Practice</div>
+            <div class="tcol-r" style="color:var(--dark); font-size:13px;">Healthcare Corporate and Regulatory Law</div>
+          </div>
+          <div class="trow" style="background:#fff;">
+            <div class="tcol-l" style="color:var(--blue); font-weight:700; font-size:12px;">Specialty</div>
+            <div class="tcol-r" style="color:var(--dark); font-size:13px;">MSO formation, telehealth structuring, physician practice organization, corporate practice of medicine</div>
+          </div>
+          <div class="trow" style="background:var(--offwhite);">
+            <div class="tcol-l" style="color:var(--blue); font-weight:700; font-size:12px;">Clients</div>
+            <div class="tcol-r" style="color:var(--dark); font-size:13px;">Health systems, hospitals, medical groups, diagnostic labs, individual practitioners</div>
+          </div>
+          <div class="trow" style="background:#fff;">
+            <div class="tcol-l" style="color:var(--blue); font-weight:700; font-size:12px;">Experience</div>
+            <div class="tcol-r" style="color:var(--dark); font-size:13px;">NY Bar 2022 &nbsp;&middot;&nbsp; 4 years in practice &nbsp;&middot;&nbsp; Prior: Harter Secrest PE/VC team</div>
+          </div>
+          <div class="trow" style="background:var(--offwhite);">
+            <div class="tcol-l" style="color:var(--blue); font-weight:700; font-size:12px;">Community</div>
+            <div class="tcol-r" style="color:var(--dark); font-size:13px;">Kidney Health Together, Inc. Board of Directors</div>
+          </div>
+          <div class="trow" style="background:#fff;">
+            <div class="tcol-l" style="color:var(--blue); font-weight:700; font-size:12px;">Networking</div>
+            <div class="tcol-r" style="color:var(--dark); font-size:13px;">Buffalo Coffee Club at Seneca One Tower</div>
+          </div>
+        </div>
+
+        <div style="width:280px; background:var(--navy); border-radius:10px; padding:26px 22px; display:flex; flex-direction:column; gap:16px;">
+          <div>
+            <div style="color:var(--teal); font-size:10px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; margin-bottom:8px;">Why Connor</div>
+            <div style="color:#fff; font-size:14px; line-height:1.6;">Real firm. Real practice. Real gaps. Real results.</div>
+          </div>
+          <div style="border-top:1px solid rgba(255,255,255,.1); padding-top:16px;">
+            <div style="color:var(--mid); font-size:12px; line-height:1.6;">Connor represents every professional service firm that is winning on effort alone and leaving clients on the table because the system is not there.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="footer"><span>lane6.ai</span><span>Case Study Template</span></div>
+  </div>
+
+  <!-- ── S3: BEFORE ───────────────────────────────────────── -->
+  <div class="slide" id="s3">
+    <div class="strip-top" style="background:var(--red);"></div>
+    <div class="slide-inner" style="background:var(--offwhite);">
+      <div class="label" style="color:var(--red);">Before Lane6</div>
+      <div class="h2" style="color:var(--dark); margin-bottom:20px;">The leaks in Connor's client-acquisition machine.</div>
+
+      <div class="flex gap12 grow">
+        <div class="leak-card">
+          <div class="leak-head" style="background:var(--red);">
+            <div style="color:#fff; font-size:12px; font-weight:700;">Marketing</div>
+          </div>
+          <div class="leak-body">
+            <div class="body" style="color:var(--dark);">No personal brand. Zero thought leadership. Invisible in legal directories and Google search.</div>
+          </div>
+        </div>
+        <div class="leak-card">
+          <div class="leak-head" style="background:var(--red);">
+            <div style="color:#fff; font-size:12px; font-weight:700;">Backend</div>
+          </div>
+          <div class="leak-body">
+            <div class="body" style="color:var(--dark);">No CRM. No referral tracking. Warm leads from networking going cold within 2 weeks.</div>
+          </div>
+        </div>
+        <div class="leak-card">
+          <div class="leak-head" style="background:var(--red);">
+            <div style="color:#fff; font-size:12px; font-weight:700;">Lead Generation</div>
+          </div>
+          <div class="leak-body">
+            <div class="body" style="color:var(--dark);">100% word of mouth. No outbound. No lead capture. No nurture sequence.</div>
+          </div>
+        </div>
+        <div class="leak-card">
+          <div class="leak-head" style="background:var(--red);">
+            <div style="color:#fff; font-size:12px; font-weight:700;">Origination</div>
+          </div>
+          <div class="leak-body">
+            <div class="body" style="color:var(--dark);">All client relationships owned by firm partners. No personal book of business.</div>
+          </div>
+        </div>
+        <div class="leak-card">
+          <div class="leak-head" style="background:var(--red);">
+            <div style="color:#fff; font-size:12px; font-weight:700;">Content</div>
+          </div>
+          <div class="leak-body">
+            <div class="body" style="color:var(--dark);">Real expertise in healthcare corporate law with no public presence to match it.</div>
+          </div>
+        </div>
+        <div class="leak-card">
+          <div class="leak-head" style="background:var(--red);">
+            <div style="color:#fff; font-size:12px; font-weight:700;">Reputation</div>
+          </div>
+          <div class="leak-body">
+            <div class="body" style="color:var(--dark);">No Avvo, no Martindale, no Google reviews. Zero structured reputation footprint.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="footer"><span>lane6.ai</span><span>Case Study Template</span></div>
+  </div>
+
+  <!-- ── S4: AFTER (PLACEHOLDERS) ─────────────────────────── -->
+  <div class="slide" id="s4">
+    <div class="strip-top" style="background:var(--green);"></div>
+    <div class="slide-inner" style="background:var(--offwhite);">
+      <div class="label" style="color:var(--green);">After Lane6</div>
+      <div class="h2" style="color:var(--dark); margin-bottom:6px;">What changed.</div>
+      <div style="color:var(--mid); font-size:12px; font-style:italic; margin-bottom:18px;">Populate each field with Connor's real results once the system is live.</div>
+
+      <div class="flex gap12 grow">
+        <div class="ph-box">
+          <div class="ph-label">Fill In: Clients Won</div>
+          <div class="ph-hint">e.g. X new healthcare corporate clients in first 90 days</div>
+        </div>
+        <div class="ph-box">
+          <div class="ph-label">Fill In: Pipeline Value</div>
+          <div class="ph-hint">e.g. $X in active healthcare matters sourced through Lane6</div>
+        </div>
+        <div class="ph-box">
+          <div class="ph-label">Fill In: Response Time</div>
+          <div class="ph-hint">e.g. Average inquiry to first response dropped from X days to X hours</div>
+        </div>
+        <div class="ph-box">
+          <div class="ph-label">Fill In: Content Reach</div>
+          <div class="ph-hint">e.g. X LinkedIn impressions per month, X new warm connections from published content</div>
+        </div>
+        <div class="ph-box">
+          <div class="ph-label">Fill In: Referral Growth</div>
+          <div class="ph-hint">e.g. Active referral sources grew from X to X in 60 days</div>
+        </div>
+        <div class="ph-box">
+          <div class="ph-label">Fill In: Directory Presence</div>
+          <div class="ph-hint">e.g. Now listed and rated on Avvo, Martindale, and Justia</div>
+        </div>
+      </div>
+    </div>
+    <div class="footer"><span>lane6.ai</span><span style="color:var(--gold); font-style:italic;">Template - Populate With Real Data</span></div>
+  </div>
+
+  <!-- ── S5: THE THESIS ────────────────────────────────────── -->
+  <div class="slide" id="s5">
+    <div class="strip-top" style="background:var(--teal);"></div>
+    <div class="slide-inner" style="background:var(--navy);">
+      <div class="label" style="color:var(--teal);">The Thesis</div>
+      <div class="h2" style="color:#fff; margin-bottom:8px;">Connor's ability to win clients is a Lane6 result.</div>
+      <div style="color:var(--offwhite); font-size:15px; margin-bottom:22px; line-height:1.6; opacity:.85;">
+        The firm recruiting you uses Lane6 to find, attract, and close clients. If it works for the firm winning you, it works for you winning your own clients.
+      </div>
+
+      <div class="flex gap14 grow">
+        <div class="card" style="border-left:5px solid var(--teal);">
+          <div class="h3" style="color:var(--teal); margin-bottom:10px;">What Connor's clients see</div>
+          <div class="body" style="color:var(--offwhite);">An attorney with a visible personal brand, published expertise, and a systematized practice. They are watching how he operates.</div>
+        </div>
+        <div class="card" style="border-left:5px solid var(--teal);">
+          <div class="h3" style="color:var(--teal); margin-bottom:10px;">What they wonder</div>
+          <div class="body" style="color:var(--offwhite);">How does he find clients this effectively? How does he stay top of mind? Why is he the one people call?</div>
+        </div>
+        <div class="card" style="border-left:5px solid var(--teal);">
+          <div class="h3" style="color:var(--teal); margin-bottom:10px;">What the answer is</div>
+          <div class="body" style="color:var(--offwhite);">Lane6. The same platform that powers Connor's client acquisition is available for their business too.</div>
+        </div>
+        <div class="card" style="border-left:5px solid var(--teal);">
+          <div class="h3" style="color:var(--teal); margin-bottom:10px;">Why this matters to you</div>
+          <div class="body" style="color:var(--offwhite);">Connor's results become your prospecting tool. Every client he recruits is a warm Lane6 referral waiting to happen.</div>
+        </div>
+      </div>
+    </div>
+    <div class="footer" style="background:rgba(0,0,0,.35);"><span style="color:var(--mid);">lane6.ai</span></div>
+  </div>
+
+  <!-- ── S6: YOUR VERSION ──────────────────────────────────── -->
+  <div class="slide" id="s6">
+    <div class="strip-top" style="background:var(--blue);"></div>
+    <div class="slide-inner" style="background:var(--offwhite);">
+      <div class="label" style="color:var(--blue);">Your Version</div>
+      <div class="h2" style="color:var(--dark); margin-bottom:8px;">The same system, mapped to your business.</div>
+      <div style="color:var(--mid); font-size:13px; margin-bottom:18px;">What Lane6 built for Connor, it builds for every professional service firm and mid-market operator with a client-acquisition gap.</div>
+
+      <div style="flex:1; display:flex; flex-direction:column; gap:5px;">
+        <div class="trow" style="background:var(--navy); border-radius:6px; padding:10px 20px;">
+          <div class="tcol-l" style="color:#fff; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.1em;">Connor's Machine</div>
+          <div style="width:4px; height:22px; background:var(--blue); border-radius:2px; flex-shrink:0;"></div>
+          <div class="tcol-r" style="color:var(--gold); font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.1em;">Your Business</div>
+        </div>
+        <div class="trow" style="background:#fff;">
+          <div class="tcol-l" style="color:var(--dark); font-size:13px;">Personal brand and visibility</div>
+          <div style="width:4px; height:20px; background:#E5E9F0; border-radius:2px; flex-shrink:0;"></div>
+          <div class="tcol-r" style="color:var(--gold); font-size:13px; font-style:italic;">[Fill in: your brand gap]</div>
+        </div>
+        <div class="trow" style="background:var(--offwhite);">
+          <div class="tcol-l" style="color:var(--dark); font-size:13px;">AI content engine</div>
+          <div style="width:4px; height:20px; background:#E5E9F0; border-radius:2px; flex-shrink:0;"></div>
+          <div class="tcol-r" style="color:var(--gold); font-size:13px; font-style:italic;">[Fill in: your content need]</div>
+        </div>
+        <div class="trow" style="background:#fff;">
+          <div class="tcol-l" style="color:var(--dark); font-size:13px;">Personal CRM and pipeline</div>
+          <div style="width:4px; height:20px; background:#E5E9F0; border-radius:2px; flex-shrink:0;"></div>
+          <div class="tcol-r" style="color:var(--gold); font-size:13px; font-style:italic;">[Fill in: your pipeline gap]</div>
+        </div>
+        <div class="trow" style="background:var(--offwhite);">
+          <div class="tcol-l" style="color:var(--dark); font-size:13px;">Referral tracking and nurture</div>
+          <div style="width:4px; height:20px; background:#E5E9F0; border-radius:2px; flex-shrink:0;"></div>
+          <div class="tcol-r" style="color:var(--gold); font-size:13px; font-style:italic;">[Fill in: your referral gap]</div>
+        </div>
+        <div class="trow" style="background:#fff;">
+          <div class="tcol-l" style="color:var(--dark); font-size:13px;">Outbound to healthcare targets</div>
+          <div style="width:4px; height:20px; background:#E5E9F0; border-radius:2px; flex-shrink:0;"></div>
+          <div class="tcol-r" style="color:var(--gold); font-size:13px; font-style:italic;">[Fill in: your target market]</div>
+        </div>
+        <div class="trow" style="background:var(--offwhite);">
+          <div class="tcol-l" style="color:var(--dark); font-size:13px;">Lead capture and nurture</div>
+          <div style="width:4px; height:20px; background:#E5E9F0; border-radius:2px; flex-shrink:0;"></div>
+          <div class="tcol-r" style="color:var(--gold); font-size:13px; font-style:italic;">[Fill in: your nurture gap]</div>
+        </div>
+      </div>
+    </div>
+    <div class="footer"><span>lane6.ai</span><span style="color:var(--gold); font-style:italic;">Template - Customize Per Prospect</span></div>
+  </div>
+
+  <!-- ── S7: CLOSE ─────────────────────────────────────────── -->
+  <div class="slide" id="s7">
+    <div class="strip" style="background:var(--green);"></div>
+    <div class="slide-inner" style="background:var(--navy); padding-left:76px; justify-content:center;">
+      <div style="color:var(--green); font-size:10px; font-weight:700; letter-spacing:.14em; text-transform:uppercase; margin-bottom:14px;">Lane6</div>
+      <div class="h1" style="color:var(--green); margin-bottom:16px;">Warm handoff.</div>
+      <div style="color:var(--offwhite); font-size:16px; line-height:1.7; max-width:600px; margin-bottom:32px;">
+        Connor Godfrey is a client of Lane6.<br>
+        He agreed to connect you directly and walk you through what the platform built for him.<br><br>
+        That conversation is the best demo we have.
+      </div>
+
+      <a href="mailto:jake.mattoon16@gmail.com" style="display:inline-block; background:var(--blue); color:#fff; padding:14px 32px; border-radius:7px; font-size:15px; font-weight:700; text-decoration:none; margin-bottom:28px; letter-spacing:.03em;">Talk to Us &nbsp;&rarr;</a>
+
+      <div style="color:var(--mid); font-size:13px; margin-bottom:6px;">jake.mattoon16@gmail.com &nbsp;&middot;&nbsp; lane6.ai</div>
+      <div style="color:#fff; font-size:15px; font-weight:700;">Jake Mattoon</div>
+      <div style="color:var(--mid); font-size:13px;">Co-Founder and CRO, Lane6</div>
+
+      <!-- endorsement placeholder -->
+      <div style="position:absolute; right:64px; top:50%; transform:translateY(-50%); width:300px; border-left:4px solid var(--gold); padding-left:20px;">
+        <div style="color:var(--gold); font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.1em; margin-bottom:10px;">Fill In: Connor's Endorsement</div>
+        <div style="color:rgba(255,255,255,.4); font-size:14px; font-style:italic; line-height:1.6;">"[Connor's direct quote once he is live and winning]"</div>
+        <div style="color:var(--mid); font-size:11px; margin-top:10px;">Connor T. Godfrey &nbsp;&middot;&nbsp; Lippes Mathias LLP</div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /deck -->
+
+<div class="nav">
+  <button id="prev" onclick="go(-1)" disabled>&#8592; Prev</button>
+  <span class="counter" id="counter">1 / 7</span>
+  <button id="next" onclick="go(1)">Next &#8594;</button>
+</div>
+<div class="hint">&#8592; &#8594; arrow keys to navigate</div>
+
+<script>
+  const slides = document.querySelectorAll('.slide');
+  let cur = 0;
+  function go(dir) {
+    slides[cur].classList.remove('active');
+    cur = Math.max(0, Math.min(slides.length - 1, cur + dir));
+    slides[cur].classList.add('active');
+    document.getElementById('counter').textContent = (cur + 1) + ' / ' + slides.length;
+    document.getElementById('prev').disabled = cur === 0;
+    document.getElementById('next').disabled = cur === slides.length - 1;
+  }
+  document.addEventListener('keydown', e => {
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') go(1);
+    if (e.key === 'ArrowLeft'  || e.key === 'ArrowUp')   go(-1);
+  });
+</script>
+</body>
+</html>
